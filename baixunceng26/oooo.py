@@ -11,9 +11,9 @@ def add_food(message):
 
 @bot.message_handler(commands=['delete'])
 def add_food(message):
-        bot.reply_to(message, "Okay")
-        del curriculum [int((message.text[7:])-1)]
-        curriculum.insert [int((message.text[7:])-1),int('no class')]
+    bot.reply_to(message, "Okay")
+    del curriculum [int((message.text[7:])-1)]
+    curriculum.insert [int((message.text[7:])-1),int('no class')]
 
 @bot.message_handler(commands=['list'])
 def list_food(message):
