@@ -60,7 +60,7 @@ def handle_options(message):
     if chat_id not in user_options:
         user_options[chat_id] = []
     user_options[chat_id].append(message.text)
-    bot.reply_to(message, f"Option added: {message.text}\nContinue entering other options, or type /stop to finish.")
+    bot.reply_to(message, f"Option added: {message.text}\nContinue entering other options, or type /done to finish.")
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('choose_'))
 def handle_query(call):
