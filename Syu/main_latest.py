@@ -1,20 +1,18 @@
-import telebot
-import requests
-import random
-import datetime
-import time
+import telebot, requests, random, datetime, time, math, threading, json
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
 from datetime import timedelta
-import math
-import threading
-import json
-from telebot.types import Message
-import threading
-from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-bot = telebot.TeleBot("6430764623:AAE06hxXPRqmKb180h7FRu3QWctRQHWZrjA")
+bot = telebot.TeleBot("6430764623:AAGZ_y2t8OZh3AVit68xwLkrSrZZMqXYbHQ")
 restaurant = []
 home = []
 setting_home = False
+picker = False
+user_options = {}
+reminder_list = []
+reminder_data = {}
+tasks = []
+completed_tasks = []
+curriculum = ['no class','no class','no class','no class','no class','no class','no class']
 
 words_ = [
     ("abrupt", "突然的"),
@@ -120,21 +118,6 @@ words_ = [
     ("zeal", "熱情")
 ]
 
-def loc_markup():
-    markup = InlineKeyboardMarkup()
-    markup.row_width = 2
-    markup.add(InlineKeyboardButton('restaurant', callback_data="restaurant"),
-                InlineKeyboardButton('get_live_location', callback_data="get_live_location"))
-    return markup
-
-def gen_markup():
-    markup = InlineKeyboardMarkup()
-    markup.row_width = 1
-    markup.add(InlineKeyboardButton('choose', callback_data="choice"))
-    return markup
-
-user_options = {}
-
 emojis = [
     "🐶", "🐱", "👄", "🌺", "🐰", "🍧", "🐻", "🎄", "🐨", "🐯",
     "🐸", "🐵", "🐔", "🐧", "🐦", "🐤", "🐣", "🐺", "🦋", "🥥",
@@ -148,148 +131,18 @@ emojis = [
     "🌯", "👒", "🥘", "🧼", "🧬", "🥎", "🧸", "🗿", "🌞", "🧤"
 ]
 
-reminder_list = []  # 
-reminder_data = {}  # 
-
-tasks = []
-completed_tasks = []
-
-curriculum = ['no class','no class','no class','no class','no class','no class','no class']
-
-@bot.message_handler(commands=['add_class'])
-def add_food(message):
-    bot.reply_to(message, "Okay")
-    curriculum[((int(message.text[5])) - 1)]= message.text[6:]
-
-@bot.message_handler(commands=['delete'])
-def add_food(message):
-    bot.reply_to(message, "Okay")
-    curriculum[((int(message.text[8])) - 1)]= ('no class')
-@bot.message_handler(commands=['list'])
-def list_food(message):
-    bot.reply_to(message, f"now curriculum: {curriculum}")
-
-@bot.message_handler(commands = ['class'])
-def function_name(message):
-    week=datetime.datetime.now()
-    weekend=week.weekday()
-    bot.reply_to(message,curriculum[weekend])
-
-@bot.message_handler(commands=["lists"])
-def send_welcome(message):
-    bot.reply_to(message, """Hello, do you need a list?
-Use /add_to_do_list to add an object to the list
-Use /print to see the whole list
-Use /del to delete an object
-Use /done to mark an item as completed
-Use /rate to see your completion rate""")
-
-@bot.message_handler(commands=["add_to_do_list"])
-def add_list(message):
-    global tasks
-    task = message.text[5:]
-    if task:
-        tasks.append(task)
-        bot.reply_to(message, f"Added: {task}")
-    else:
-        bot.reply_to(message, "Please provide an item to add.")
-
-@bot.message_handler(commands=["del"])
-def del_list(message):
-    global tasks
-    task = message.text[5:]
-    if task in tasks:
-        tasks.remove(task)
-        bot.reply_to(message, f"Deleted: {task}")
-    else:
-        bot.reply_to(message, "Item not found in the list.")
-
-@bot.message_handler(commands=["done"])
-def done_list(message):
-    global tasks, completed_tasks
-    task = message.text[6:]
-    if task in tasks:
-        tasks.remove(task)
-        completed_tasks.append(task)
-        bot.reply_to(message, f"Marked as completed: {task}")
-    else:
-        bot.reply_to(message, "Item not found in the list.")
-
-@bot.message_handler(commands=["print"])
-def print_list(message):
-    global tasks, completed_tasks
-    if tasks:
-        bot.reply_to(message, f"Tasks: {tasks}\nCompleted Tasks: {completed_tasks}")
-    else:
-        bot.reply_to(message, "The task list is empty.")
-
-@bot.message_handler(commands=["rate"])
-def rate_list(message):
-    global tasks, completed_tasks
-    total_tasks = len(tasks) + len(completed_tasks)
-    if total_tasks == 0:
-        completion_rate = 0
-    else:
-        completion_rate = (len(completed_tasks) / total_tasks) * 100
-    bot.reply_to(message, f"Your completion rate is {completion_rate:.2f}%")
-
-@bot.message_handler(commands=['export'])
-def export_food_list(message):
-    try:
-        with open('lists.json', 'w') as file:
-            json.dump({'tasks': tasks, 'completed_tasks': completed_tasks}, file, indent=4)
-        bot.reply_to(message, "Task list has been successfully exported to lists.json.")
-    except Exception as e:
-        bot.reply_to(message, f"An error occurred while exporting the task list: {e}")
-
-@bot.message_handler(commands=['import'])
-def import_food_list(message):
-    global tasks, completed_tasks
-    try:
-        with open('lists.json', 'r') as file:
-            data = json.load(file)
-            tasks = data.get('tasks', [])
-            completed_tasks = data.get('completed_tasks', [])
-        bot.reply_to(message, "Task list has been successfully imported from lists.json.")
-    except FileNotFoundError:
-        bot.reply_to(message, "No lists.json file found. Please export a task list first.")
-    except Exception as e:
-        bot.reply_to(message, f"An error occurred while importing the task list: {e}")
-
-@bot.message_handler(commands=['reminder'])  # 
-def send_welcome(message):
-    # 
-    bot.send_message(message.chat.id, "Hi there! I can help you set reminders.😄📋 \nUse /add to add a new reminder or /reminderlist to see your reminders.")
-
-@bot.message_handler(commands=['add'])  # 
-def add_reminder(message):
-    # 
-    msg = bot.send_message(message.chat.id, "Please enter your reminder message 💭")
-    # 
-    bot.register_next_step_handler(msg, process_reminder_message)
-
-def process_reminder_message(message):
-    chat_id = message.chat.id
-    reminder_data[chat_id] = {'message': message.text}  # 
-
-    # 
+def loc_markup():
     markup = InlineKeyboardMarkup()
-    markup.row_width = 3
-    markup.add(
-        InlineKeyboardButton("🔔 Important", callback_data="🔔 Important"),
-        InlineKeyboardButton("🚨 Emergency", callback_data="🚨 Emergency"),
-        InlineKeyboardButton("🌻 Daily", callback_data="🌻 Daily")
-    )
+    markup.row_width = 2
+    markup.add(InlineKeyboardButton('restaurant', callback_data="restaurant"),
+                InlineKeyboardButton('get_live_location', callback_data="get_live_location"))
+    return markup
 
-    # 
-    bot.send_message(chat_id, "Please select the importance:", reply_markup=markup)
-
-@bot.callback_query_handler(func=lambda call: call.data in ["🔔 Important", "🚨 Emergency", "🌻 Daily"])
-def callback_importance(call):
-    chat_id = call.message.chat.id
-    reminder_data[chat_id]['importance'] = call.data  
-    bot.send_message(chat_id, "Please enter the reminder time in the format: YYYY-MM-DD HH:MM.")
-    bot.register_next_step_handler_by_chat_id(chat_id, process_reminder_time)
+def gen_markup():
+    markup = InlineKeyboardMarkup()
+    markup.row_width = 1
+    markup.add(InlineKeyboardButton('choose', callback_data="choice"))
+    return markup
 
 def process_reminder_time(message):
     chat_id = message.chat.id
@@ -324,81 +177,31 @@ def send_reminder(reminder):
     
     bot.send_message(chat_id, f'Reminder: {reminder_message}\nImportance: {importance}')
 
-@bot.message_handler(commands=['reminderlist'])  
-def list_reminders(message):
-    if not reminder_list:
-        
-        bot.send_message(message.chat.id, "You have no reminders set.")
-    else:
-        reminders = []
-        for reminder in reminder_list:
-            chat_id, reminder_message, importance, reminder_datetime = reminder
-            if chat_id == message.chat.id:
-                
-                reminders.append(f'{reminder_message} at {reminder_datetime.strftime("%Y-%m-%d %H:%M")} (Importance: {importance})')
-        if reminders:
-            
-            bot.send_message(message.chat.id, "\n".join(reminders))
-        else:
-            bot.send_message(message.chat.id, "You have no reminders set.")
+def get_daily_words():
+    random_numbers = [random.randint(0, 100) for _ in range(5)]
+    result = ""
+    for i in range(5):
+        result += f"{str(" ".join([i for i in random.choice(words_)]))}\n"
+    return result
 
-@bot.message_handler(commands=['picker']) #type in /picker 
-def send_welcome(message):
-    bot.reply_to(message, "Need a fun random picker? StraightABot can help you!😉🎲")
-    bot.send_message(message.chat.id, "Please start entering your options, one option per message. Type /done to finish entering options.")
+def send_daily_words():
+    daily_words = get_daily_words()
+    res = "\n".join([f"{word[0]} - {word[1]}" for word in daily_words])
+    return res
 
-@bot.message_handler(commands=['done'])
-def stop_input(message):
-    chat_id = message.chat.id
-    options = user_options.get(chat_id, [])
-    if not options:
-        bot.reply_to(message, "You haven't entered any options yet. Please start entering your options.")
-        return
+def seconds_until_tomorrow_8am():
+    now = datetime.datetime.now()
+    tomorrow_8am = datetime.datetime.combine(now.date() + timedelta(days=1), datetime.datetime.min.time()) + timedelta(hours=8)
+    return (tomorrow_8am - now).total_seconds()
 
-    random.shuffle(options)
-    markup = InlineKeyboardMarkup()
-    buttons_per_row = math.ceil(math.sqrt(len(options)))
-    for i in range(0, len(options), buttons_per_row):
-        row = []
-        for j in range(i, min(i + buttons_per_row, len(options))):
-            emoji = random.choice(emojis)
-            row.append(InlineKeyboardButton(text=f"{emoji} Option {j+1}", callback_data=f"choose_{j}"))
-        markup.add(*row)
-    markup.add(InlineKeyboardButton(text="🎲 StraightAFerret Randomly Choose", callback_data="choose_random"))
-    bot.send_message(chat_id, "Choose an option or let me randomly choose one for you:", reply_markup=markup)
-
-@bot.message_handler(func=lambda message: True)
-def handle_options(message):
-    chat_id = message.chat.id
-    if message.text.lower() == '/done':
-        stop_input(message)
-        return
-
-    if chat_id not in user_options:
-        user_options[chat_id] = []
-    user_options[chat_id].append(message.text)
-    bot.reply_to(message, f"Option added: {message.text}\nContinue entering other options, or type /stop to finish.")
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith('choose_'))
-def handle_query(call):
-    chat_id = call.message.chat.id
-    options = user_options.get(chat_id, [])
-    if not options:
-        bot.answer_callback_query(call.id, "No options available. Please start entering your options.")
-        return
-
-    if call.data == 'choose_random':
-        index = random.randint(0, len(options) - 1)
-    else:
-        index = int(call.data.split('_')[1])
-
-    chosen_option = options[index]
-    bot.answer_callback_query(call.id, f"🗣️ You have chosen: {chosen_option}❗", show_alert=True)
-    bot.send_message(chat_id, f"🗣️ You have chosen: {chosen_option}❗")
+def daily_task():
+    while True:
+        time.sleep(seconds_until_tomorrow_8am())
+        send_daily_words()
 
 @bot.message_handler(commands=['help', 'start'])
 def get_help(message):
-    bot.send_message(chat_id=message.chat.id, text="\"/help\"以取得幫助\n\"/aqi\"以取得空氣品質\n\"/weather\"以取得未來36小時天氣預報\n傳送位置以取得 10 公里內的餐廳\n")
+    bot.send_message(chat_id=message.chat.id, text = "\"/help\"以取得幫助\n\"/aqi\"以取得空氣品質\n\"/weather\"以取得未來36小時天氣預報\n傳送位置以取得 10 公里內的餐廳\n\"/daily_words\"啟用每日推播 5 單字\n\"/words\"以獲得額外 5 單字\n\"/lists\"以使用 to do list\n\"/picker\"以使用轉盤\n\"/reminder\"以使用設定提醒\n\"/curriculum\"以使用課表")
 
 @bot.message_handler(commands=['aqi'])
 def get_aqi(message):
@@ -441,28 +244,9 @@ def handle_location(message):
     response_text = f"10公里內的餐廳店家有：\n\n" + "\n".join(data) + "\n可點擊\'choose\'隨機選出一間"
     bot.send_message(message.chat.id, response_text, reply_markup=gen_markup())
 
-@bot.message_handler(commands=['choice'])
-def get_choice(message):
-    try:
-        bot.send_message(chat_id=message.chat.id, text=random.choice(restaurant), reply_markup=gen_markup())
-    except:
-        bot.send_message(chat_id=message.chat.id, text='沒有店家')
-
 @bot.callback_query_handler(func=lambda call: True)
 def callback_choice(call):
     bot.send_message(call.message.chat.id, random.choice(restaurant), reply_markup=gen_markup())
-
-def get_daily_words():
-    random_numbers = [random.randint(0, 100) for _ in range(5)]
-    result = ""
-    for i in range(5):
-        result += f"{str(" ".join([i for i in random.choice(words_)]))}\n"
-    return result
-
-def send_daily_words():
-    daily_words = get_daily_words()
-    res = "\n".join([f"{word[0]} - {word[1]}" for word in daily_words])
-    bot.send_message(message.chat.id, res)
 
 @bot.message_handler(commands=['daily_words'])
 def start(message):
@@ -473,15 +257,167 @@ def words(message):
     text = get_daily_words()
     bot.reply_to(message, text)
 
-def seconds_until_tomorrow_8am():
-    now = datetime.now()
-    tomorrow_8am = datetime.combine(now.date() + timedelta(days=1), datetime.min.time()) + timedelta(hours=8)
-    return (tomorrow_8am - now).total_seconds()
+@bot.message_handler(commands=['picker']) #type in /picker 
+def send_welcome(message):
+    bot.reply_to(message, "Need a fun random picker? StraightABot can help you!😉🎲")
+    bot.send_message(message.chat.id, "Please start entering your options, one option per message. Type /done to finish entering options.")
+@bot.message_handler(commands=['done'])
+def stop_input(message):
+    chat_id = message.chat.id
+    options = user_options.get(chat_id, [])
+    if not options:
+        bot.reply_to(message, "You haven't entered any options yet. Please start entering your options.")
+        return
 
-def daily_task():
-    while True:
-        time.sleep(seconds_until_tomorrow_8am())
-        send_daily_words()
+    random.shuffle(options)
+    markup = InlineKeyboardMarkup()
+    buttons_per_row = math.ceil(math.sqrt(len(options)))
+    for i in range(0, len(options), buttons_per_row):
+        row = []
+        for j in range(i, min(i + buttons_per_row, len(options))):
+            emoji = random.choice(emojis)
+            row.append(InlineKeyboardButton(text=f"{emoji} Option {j+1}", callback_data=f"choose_{j}"))
+        markup.add(*row)
+    markup.add(InlineKeyboardButton(text="🎲 StraightAFerret Randomly Choose", callback_data="choose_random"))
+    bot.send_message(chat_id, "Choose an option or let me randomly choose one for you:", reply_markup=markup)
+
+@bot.message_handler(func=lambda message: True)
+def handle_options(message):
+    chat_id = message.chat.id
+    if message.text.lower() == '/done':
+        stop_input(message)
+        return
+
+    if chat_id not in user_options:
+        user_options[chat_id] = []
+    user_options[chat_id].append(message.text)
+    bot.reply_to(message, f"Option added: {message.text}\nContinue entering other options, or type /done to finish.")
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith('choose_'))
+def handle_query(call):
+    chat_id = call.message.chat.id
+    options = user_options.get(chat_id, [])
+    if not options:
+        bot.answer_callback_query(call.id, "No options available. Please start entering your options.")
+        return
+
+    if call.data == 'choose_random':
+        index = random.randint(0, len(options) - 1)
+    else:
+        index = int(call.data.split('_')[1])
+
+    chosen_option = options[index]
+    bot.answer_callback_query(call.id, f"🗣️ You have chosen: {chosen_option}❗", show_alert=True)
+    bot.send_message(chat_id, f"🗣️ You have chosen: {chosen_option}❗")
+
+@bot.message_handler(commands=['reminder'])
+def send_welcome(message):
+    bot.send_message(message.chat.id, "Hi there! I can help you set reminders.😄📋 \nUse /add to add a new reminder or /reminderlist to see your reminders.")
+
+@bot.message_handler(commands=['add'])
+def add_reminder(message):
+    # 
+    msg = bot.send_message(message.chat.id, "Please enter your reminder message 💭")
+    # 
+    bot.register_next_step_handler(msg, process_reminder_message)
+
+def process_reminder_message(message):
+    chat_id = message.chat.id
+    reminder_data[chat_id] = {'message': message.text}  # 
+
+    markup = InlineKeyboardMarkup()
+    markup.row_width = 3
+    markup.add(
+        InlineKeyboardButton("🔔 Important", callback_data="🔔 Important"),
+        InlineKeyboardButton("🚨 Emergency", callback_data="🚨 Emergency"),
+        InlineKeyboardButton("🌻 Daily", callback_data="🌻 Daily")
+    )
+    bot.send_message(chat_id, "Please select the importance:", reply_markup=markup)
+
+@bot.callback_query_handler(func=lambda call: call.data in ["🔔 Important", "🚨 Emergency", "🌻 Daily"])
+def callback_importance(call):
+    chat_id = call.message.chat.id
+    reminder_data[chat_id]['importance'] = call.data  
+    bot.send_message(chat_id, "Please enter the reminder time in the format: YYYY-MM-DD HH:MM.")
+    bot.register_next_step_handler_by_chat_id(chat_id, process_reminder_time)
+
+@bot.message_handler(commands=['reminderlist'])  
+def list_reminders(message):
+    if not reminder_list:
+        
+        bot.send_message(message.chat.id, "You have no reminders set.")
+    else:
+        reminders = []
+        for reminder in reminder_list:
+            chat_id, reminder_message, importance, reminder_datetime = reminder
+            if chat_id == message.chat.id:
+                
+                reminders.append(f'{reminder_message} at {reminder_datetime.strftime("%Y-%m-%d %H:%M")} (Importance: {importance})')
+        if reminders:
+            
+            bot.send_message(message.chat.id, "\n".join(reminders))
+        else:
+            bot.send_message(message.chat.id, "You have no reminders set.")
+
+
+
+@bot.message_handler(commands=["lists"])
+def send_welcome(message):
+    bot.reply_to(message, """Hello, do you need a list?
+Use /add_to_do_list to add an object to the list
+Use /print to see the whole list
+Use /del to delete an object
+Use /done to mark an item as completed
+Use /rate to see your completion rate""")
+
+@bot.message_handler(commands=["add_to_do_list"])
+def add_list(message):
+    global tasks
+    task = message.text[5:]
+    if task:
+        tasks.append(task)
+        bot.reply_to(message, f"Added: {task}")
+    else:
+        bot.reply_to(message, "Please provide an item to add.")
+
+@bot.message_handler(commands=["del"])
+def del_list(message):
+    global tasks
+    task = message.text[5:]
+    if task in tasks:
+        tasks.remove(task)
+        bot.reply_to(message, f"Deleted: {task}")
+    else:
+        bot.reply_to(message, "Item not found in the list.")
+
+@bot.message_handler(commands=["print"])
+def print_list(message):
+    global tasks, completed_tasks
+    if tasks:
+        bot.reply_to(message, f"Tasks: {tasks}\nCompleted Tasks: {completed_tasks}")
+    else:
+        bot.reply_to(message, "The task list is empty.")
+
+@bot.message_handler(commands=["done"])
+def done_list(message):
+    global tasks, completed_tasks
+    task = message.text[6:]
+    if task in tasks:
+        tasks.remove(task)
+        completed_tasks.append(task)
+        bot.reply_to(message, f"Marked as completed: {task}")
+    else:
+        bot.reply_to(message, "Item not found in the list.")
+
+@bot.message_handler(commands=["rate"])
+def rate_list(message):
+    global tasks, completed_tasks
+    total_tasks = len(tasks) + len(completed_tasks)
+    if total_tasks == 0:
+        completion_rate = 0
+    else:
+        completion_rate = (len(completed_tasks) / total_tasks) * 100
+    bot.reply_to(message, f"Your completion rate is {completion_rate:.2f}%")
 
 task_thread = threading.Thread(target=daily_task)
 task_thread.start()
